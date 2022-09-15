@@ -408,7 +408,7 @@ describe("nestedWritable", () => {
   });
 
   describe("chooseWritable", () => {
-    it("calls subscribers only if the predicate returns true", () => {
+    it("calls subscribers only if the chooser doesn't refuse", () => {
       type ValueA = { type: "A"; value: number };
       type ValueB = { type: "B"; value: string };
       type Both = ValueA | ValueB | undefined;
