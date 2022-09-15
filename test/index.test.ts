@@ -443,6 +443,32 @@ describe("nestedWritable", () => {
       });
     });
 
+    it("refuses initially non-matching value", () => {
+      type OnlyPresent = { value: number };
+      type Value = OnlyPresent | undefined;
+      const init: Value = undefined;
+
+      const value = writableTree<Value>(init);
+      const onlyPresent = value.chooseWritable((v) => v ?? Refuse);
+      const internalValue = onlyPresent.zoomInWritable("value");
+
+      const called = {
+        value: [] as Value[],
+        onlyPresent: [] as OnlyPresent[],
+        internalValue: [] as number[],
+      };
+
+      value.subscribe((v) => called.value.push(v));
+      onlyPresent.subscribe((v) => called.onlyPresent.push(v));
+      internalValue.subscribe((v) => called.internalValue.push(v));
+
+      expect(called).toEqual({
+        value: [init],
+        onlyPresent: [],
+        internalValue: [],
+      });
+    });
+
     describe("when the data has grand children", () => {
       type Value = { value: string; child: Child | undefined };
       type Child = {
