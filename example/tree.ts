@@ -1,6 +1,5 @@
-import { Refuse } from "../src/index";
+import { Refuse, writableTree } from "../src/index";
 import type { WritableTree } from "../src/index";
-import { writableTree } from "../src/index";
 
 export type KeyValue = {
   key: string;
@@ -17,9 +16,28 @@ export const tree = writableTree<Tree>([
   { key: "some key", value: "some value" },
 ]);
 
-export type AppendType = "string" | "undefined" | "KeyValue" | "List";
+export type NodeType = "string" | "undefined" | "KeyValue" | "List";
 
-export function appendTo(ls: WritableTree<Tree[]>, typ: AppendType): void {
+export function changeNodeType(tree: WritableTree<Tree>, typ: NodeType): void {
+  let newNode: Tree;
+  switch (typ) {
+    case "undefined":
+      newNode = undefined;
+      break;
+    case "string":
+      newNode = "";
+      break;
+    case "KeyValue":
+      newNode = { key: "", value: "" };
+      break;
+    case "List":
+      newNode = [""];
+      break;
+  }
+  tree.set(newNode);
+}
+
+export function appendTo(ls: WritableTree<Tree[]>, typ: NodeType): void {
   let newNode: Tree;
   switch (typ) {
     case "undefined":
@@ -45,5 +63,5 @@ export function chooseKeyValue(tree: Tree): KeyValue | Refuse {
   if (tree === undefined || typeof tree === "string" || tree instanceof Array) {
     return Refuse;
   }
-  return tree
+  return tree;
 }
