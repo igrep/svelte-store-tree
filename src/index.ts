@@ -50,11 +50,11 @@ export function objectAccessor<P, K extends keyof P>(
   };
 }
 
-export function mapAccessor<K extends Key, V>(
-  key: K,
-): Accessor<Map<K, V>, V> {
+export function mapAccessor<K extends Key, V>(key: K): Accessor<Map<K, V>, V> {
   return {
-    readChild: (parent: Map<K, V>) => parent.has(key) ? parent.get(key)! : Refuse,
+    readChild: (parent: Map<K, V>) =>
+      /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
+      parent.has(key) ? parent.get(key)! : Refuse,
     writeChild: (parent: Map<K, V>, newChild: V) => {
       parent.set(key, newChild);
     },
@@ -179,7 +179,7 @@ function writableTreeCore<P>(
           tmpQueue.push(getterAndChild);
         }
         let getterAndChild: GetterAndChild | undefined;
-        while (getterAndChild = tmpQueue.shift()) {
+        while ((getterAndChild = tmpQueue.shift())) {
           for (const subscribersNode of getterAndChild.c.thisSubscribers) {
             subscribersNode.i();
             const chosenChild = subscribersNode.g();
