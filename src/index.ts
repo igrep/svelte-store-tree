@@ -18,27 +18,28 @@ export type Refuse = typeof Refuse;
 
 type Chooser<T, T_ extends T = T> = (value: T) => T_ | Refuse;
 
+type Getter<T> = () => T | Refuse;
+
 export type Key = string | number | symbol;
 
 export type Accessor<P, C> = {
-  readChild: (parent: P) => C;
+  readChild: (parent: P) => C | Refuse;
   writeChild: (parent: P, newChild: C) => void;
 };
 
 type SubscribersNode = {
   r: Subscriber<unknown>;
   i: Invalidator<unknown>;
-  c: Chooser<unknown>;
+  g: Getter<unknown>;
 };
 
-type AccessorAndChild = {
-  a: Accessor<unknown, unknown>;
+type GetterAndChild = {
+  g: Getter<unknown>;
   c: SubscribersTree;
-  cp: Chooser<unknown>; // choose parent
 };
 
 type SubscribersTree = {
-  children: Set<AccessorAndChild>;
+  children: Set<GetterAndChild>;
   thisSubscribers: Set<SubscribersNode>;
 };
 
@@ -53,14 +54,10 @@ export function objectAccessor<P, K extends keyof P>(
 
 export function mapAccessor<K extends Key, V>(
   key: K,
-): Accessor<Map<K, V>, V | undefined> {
+): Accessor<Map<K, V>, V> {
   return {
-    readChild: (parent: Map<K, V>) => parent.get(key),
-    writeChild: (parent: Map<K, V>, newChild: V | undefined) => {
-      if (newChild === undefined) {
-        parent.delete(key);
-        return;
-      }
+    readChild: (parent: Map<K, V>) => parent.has(key) ? parent.get(key)! : Refuse,
+    writeChild: (parent: Map<K, V>, newChild: V) => {
       parent.set(key, newChild);
     },
   };
@@ -155,7 +152,7 @@ export function writableTree<P>(
 }
 
 function writableTreeCore<P, P_ extends P = P>(
-  getValue: () => P,
+  getValue: () => P | Refuse,
   writeValue: (newValue: P) => void,
   tree: SubscribersTree,
   incrementThenStartIfNecessary: StartStopNotifier<P>,
@@ -173,37 +170,36 @@ function writableTreeCore<P, P_ extends P = P>(
         for (const parentSubscriber of parentSubscribers) {
           parentSubscriber(subscriber_queue);
         }
-        const currentValue = getValue();
         for (const subscriber of tree.thisSubscribers) {
           subscriber.i();
-          const chosenValue = subscriber.c(currentValue);
+          const chosenValue = subscriber.g();
           if (chosenValue !== Refuse) {
             subscriber_queue.push(subscriber, chosenValue);
           }
           // console.log('Rejected a child THIS AAAA');
         }
 
-        // type TmpQueue = [AccessorAndChild, T, ...(TmpQueue | [])];
+        // type TmpQueue = [GetterAndChild, T, ...(TmpQueue | [])];
         // const tmpQueue: TmpQueue;
         const tmpQueue: any[] = [];
-        for (const accessorAndChild of tree.children.values()) {
-          const chosenValue = accessorAndChild.cp(currentValue);
+        for (const getterAndChild of tree.children.values()) {
+          const chosenValue = getterAndChild.g();
           if (chosenValue !== Refuse) {
             tmpQueue.push(
-              accessorAndChild,
-              accessorAndChild.a.readChild(chosenValue),
+              getterAndChild,
+              chosenValue,
             );
           }
           // console.log('Rejected a CHILD AAAA');
         }
-        let accessorAndChild: AccessorAndChild | undefined;
+        let getterAndChild: GetterAndChild | undefined;
         let child: any;
         while (tmpQueue.length) {
-          accessorAndChild = tmpQueue.shift() as AccessorAndChild;
+          getterAndChild = tmpQueue.shift() as GetterAndChild;
           child = tmpQueue.shift();
 
-          for (const subscribersNode of accessorAndChild.c.thisSubscribers) {
-            const chosenChild = subscribersNode.c(child);
+          for (const subscribersNode of getterAndChild.c.thisSubscribers) {
+            const chosenChild = subscribersNode.g();
             if (chosenChild !== Refuse) {
               subscribersNode.i();
               subscriber_queue.push(subscribersNode, chosenChild);
@@ -211,10 +207,10 @@ function writableTreeCore<P, P_ extends P = P>(
             // console.log('Rejected a child THIS BBBB');
           }
 
-          for (const childNode of accessorAndChild.c.children.values()) {
-            const chosenChild = childNode.cp(child);
+          for (const childNode of getterAndChild.c.children.values()) {
+            const chosenChild = childNode.g();
             if (chosenChild !== Refuse) {
-              tmpQueue.push(childNode, childNode.a.readChild(chosenChild));
+              tmpQueue.push(childNode, chosenChild);
             }
             // console.log('Rejected a CHILD BBBB');
           }
@@ -231,7 +227,10 @@ function writableTreeCore<P, P_ extends P = P>(
   }
 
   function update(fn: Updater<P>): void {
-    set(fn(getValue()));
+    const v = getValue();
+    if (v !== Refuse) {
+      set(fn(v));
+    }
   }
 
   function subscribe(
@@ -241,13 +240,13 @@ function writableTreeCore<P, P_ extends P = P>(
     const subscriber: SubscribersNode = {
       r: run as Subscriber<unknown>,
       i: invalidate as Invalidator<unknown>,
-      c: chooser as Chooser<unknown>,
+      g: getValue,
     };
     tree.thisSubscribers.add(subscriber);
     incrementThenStartIfNecessary(set);
-    const chosenValue = chooser(getValue());
-    if (chosenValue !== Refuse) {
-      run(chosenValue);
+    const v = getValue();
+    if (v !== Refuse) {
+      run(v);
     }
 
     return () => {
@@ -278,35 +277,49 @@ function writableTreeCore<P, P_ extends P = P>(
   }
 
   function zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C> {
-    const child: AccessorAndChild = {
-      a: accessor as Accessor<unknown, unknown>,
+    const getter = () => {
+      const v = getValue();
+      if (v === Refuse) {
+        return Refuse;
+      }
+      return accessor.readChild(v);
+    };
+    const child: GetterAndChild = {
+      g: getter as Getter<unknown>,
       c: {
         children: new Set(),
         thisSubscribers: new Set(),
       },
-      cp: chooser as Chooser<unknown>,
     };
     tree.children.add(child);
 
     return writableTreeCore(
-      () => accessor.readChild(getValue()),
-      (newChild: C) => accessor.writeChild(getValue(), newChild),
+      getter,
+      (newChild: C) => {
+        const v = getValue();
+        if (v === Refuse) {
+          return;
+        }
+        accessor.writeChild(v, newChild);
+      },
       child.c,
       function incrementThenStartIfNecessaryForChild(set: Subscriber<C>) {
-        incrementThenStartIfNecessary((parent: P) =>
-          set(accessor.readChild(parent)),
-        );
+        incrementThenStartIfNecessary((parent: P) => {
+          const v = accessor.readChild(parent);
+          if (v !== Refuse) {
+            set(v);
+          }
+        });
       },
       decrementThenStopIfNecessary,
       isReady,
       [
         ...parentSubscribers,
         (subscriber_queue: SubscriberQueue) => {
-          const currentValue = getValue();
           for (const subscriber of tree.thisSubscribers) {
-            const chosenValue = subscriber.c(currentValue);
-            subscriber.i();
+            const chosenValue = subscriber.g();
             if (chosenValue !== Refuse) {
+              subscriber.i();
               subscriber_queue.push(subscriber, chosenValue);
             }
           }
@@ -351,7 +364,13 @@ function writableTreeCore<P, P_ extends P = P>(
     chooseParent: (parent: P) => P_ | Refuse,
   ): WritableTree<P_> {
     return writableTreeCore<P_>(
-      getValue as () => P_,
+      function newGetValue(): P_ | Refuse {
+        const v = getValue();
+        if (v === Refuse) {
+          return Refuse;
+        }
+        return chooseParent(v);
+      },
       writeValue,
       tree,
       incrementThenStartIfNecessary as StartStopNotifier<P_>,
