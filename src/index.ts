@@ -16,8 +16,6 @@ type Invalidator<T> = (value?: T) => void;
 export const Refuse: unique symbol = Symbol();
 export type Refuse = typeof Refuse;
 
-type Chooser<T, T_ extends T = T> = (value: T) => T_ | Refuse;
-
 type Getter<T> = () => T | Refuse;
 
 export type Key = string | number | symbol;
@@ -147,11 +145,10 @@ export function writableTree<P>(
       return !!stop;
     },
     [],
-    (parent: P) => parent,
   );
 }
 
-function writableTreeCore<P, P_ extends P = P>(
+function writableTreeCore<P>(
   getValue: () => P | Refuse,
   writeValue: (newValue: P) => void,
   tree: SubscribersTree,
@@ -159,7 +156,6 @@ function writableTreeCore<P, P_ extends P = P>(
   decrementThenStopIfNecessary: Unsubscriber,
   isReady: () => boolean,
   parentSubscribers: ParentSubscriber[],
-  chooser: Chooser<P, P_>,
 ): WritableTree<P> {
   function set(new_value: P): void {
     if (safe_not_equal(getValue(), new_value)) {
@@ -176,43 +172,24 @@ function writableTreeCore<P, P_ extends P = P>(
           if (chosenValue !== Refuse) {
             subscriber_queue.push(subscriber, chosenValue);
           }
-          // console.log('Rejected a child THIS AAAA');
         }
 
-        // type TmpQueue = [GetterAndChild, T, ...(TmpQueue | [])];
-        // const tmpQueue: TmpQueue;
-        const tmpQueue: any[] = [];
+        const tmpQueue: GetterAndChild[] = [];
         for (const getterAndChild of tree.children.values()) {
-          const chosenValue = getterAndChild.g();
-          if (chosenValue !== Refuse) {
-            tmpQueue.push(
-              getterAndChild,
-              chosenValue,
-            );
-          }
-          // console.log('Rejected a CHILD AAAA');
+          tmpQueue.push(getterAndChild);
         }
         let getterAndChild: GetterAndChild | undefined;
-        let child: any;
-        while (tmpQueue.length) {
-          getterAndChild = tmpQueue.shift() as GetterAndChild;
-          child = tmpQueue.shift();
-
+        while (getterAndChild = tmpQueue.shift()) {
           for (const subscribersNode of getterAndChild.c.thisSubscribers) {
+            subscribersNode.i();
             const chosenChild = subscribersNode.g();
             if (chosenChild !== Refuse) {
-              subscribersNode.i();
               subscriber_queue.push(subscribersNode, chosenChild);
             }
-            // console.log('Rejected a child THIS BBBB');
           }
 
           for (const childNode of getterAndChild.c.children.values()) {
-            const chosenChild = childNode.g();
-            if (chosenChild !== Refuse) {
-              tmpQueue.push(childNode, chosenChild);
-            }
-            // console.log('Rejected a CHILD BBBB');
+            tmpQueue.push(childNode);
           }
         }
 
@@ -325,7 +302,6 @@ function writableTreeCore<P, P_ extends P = P>(
           }
         },
       ],
-      (child: C) => child,
     );
   }
 
@@ -377,14 +353,6 @@ function writableTreeCore<P, P_ extends P = P>(
       decrementThenStopIfNecessary,
       isReady,
       parentSubscribers,
-      function newChooser(parent: P): P_ | Refuse {
-        const chosenValue0 = chooser(parent);
-        if (chosenValue0 === Refuse) {
-          return Refuse;
-        }
-        // console.log('Rejected a PARENT');
-        return chooseParent(chosenValue0);
-      },
     );
   }
 
