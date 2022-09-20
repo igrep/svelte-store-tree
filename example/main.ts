@@ -1,9 +1,7 @@
-import Tree from "./Tree.svelte";
-import { tree } from "./tree";
+import Root from "./Root.svelte";
 
-const app = new Tree({
+const app = new Root({
   target: document.getElementById("app")!,
-  props: { tree },
 });
 
 export default app;
