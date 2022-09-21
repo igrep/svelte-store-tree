@@ -1,8 +1,10 @@
 # svelte-store-tree
 
-Provides writable/readable stores that can 'zoom' into the part of the store value.
-
 Current status: Experimental.
+
+Provides writable/readable stores that can 'zoom' into the part of the store
+value. Enables us to manage the state of the app in a single object while
+keeping the independence of every child component.
 
 # Example
 
@@ -61,12 +63,12 @@ favoriteColor.subscribe((newColor) => {
 const urls = contact.zoomInWritable('urls');
 
 // Notifies `someRecord`, `contact`, and `urls`.
-// ** Changes are propagated only to the direct subscribes, and the parent's. **
-// ** Not to the subscribes of the siblings and the uncles/aunts. **
+// ** Changes are propagated only to the direct subscribes, and the ancestors'. **
+// ** Not to the the siblings' to avoid extra rerendering. **
 urls.update((u) => [...u, 'https://twitter.com/igrep']);
 
 // If your record has a union type, `chooseWritable` is useful.
-// Pass a function that returns a `Refuse` (a unique symbol defined in this library)
+// Pass a function that returns a `Refuse` (a unique symbol provided by this library)
 // if the value doesn't satisfy the condition.
 const favoriteColorNonUndefined =
   favoriteColor.chooseWritable((color) => color ?? Refuse);
