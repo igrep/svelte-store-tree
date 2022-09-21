@@ -17,7 +17,8 @@
     "url": "git+https://github.com/igrep/svelte-store-tree.git"
   },
   "keywords": [
-    "svelte"
+    "svelte",
+    "state"
   ],
   "author": "Internet Initiative Japan Inc.",
   "license": "BSD-3-Clause",
