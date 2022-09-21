@@ -2,8 +2,8 @@
 
 Current status: Experimental.
 
-Provides writable/readable stores that can 'zoom' into the part of the store
-value. Enables us to manage the state of the app in a single object while
+Provides writable/readable stores that can 'zoom' into a part of the store
+value. It enables us to manage the state of the app in a single object while
 keeping the independence of every child component.
 
 # Example
@@ -59,12 +59,12 @@ favoriteColor.subscribe((newColor) => {
   console.log('Updated the color', newColor);
 });
 
-// We can apply `zoomIn`/`zoomInWritable` more:
+// We can apply `zoomIn`/`zoomInWritable` deeper:
 const urls = contact.zoomInWritable('urls');
 
-// Notifies `someRecord`, `contact`, and `urls`.
-// ** Changes are propagated only to the direct subscribes, and the ancestors'. **
-// ** Not to the the siblings' to avoid extra rerendering. **
+// Notifies the subscribers of `someRecord`, `contact`, and `urls`.
+// ** Changes are propagated only to the direct subscribers, and the ancestors'. **
+// ** Not to the the siblings' to avoid extra rerendering of the subscribing components. **
 urls.update((u) => [...u, 'https://twitter.com/igrep']);
 
 // If your record has a union type, `chooseWritable` is useful.
@@ -79,10 +79,10 @@ favoriteColorNonUndefined.subscribe((newColor) => {
   console.log('Updated the color', newColor);
 });
 
-// Notifies `someRecord`, `favoriteColor`, and `favoriteColorNonUndefined`.
+// Notifies the subscribers of `someRecord`, `favoriteColor`, and `favoriteColorNonUndefined`.
 favoriteColor.set([0xC0, 0x10, 0x10]);
 
-// Notifies `someRecord`, and `favoriteColor` (not `favoriteColorNonUndefined`).
+// Notifies the subscribers of `someRecord`, and `favoriteColor` (not `favoriteColorNonUndefined`).
 favoriteColor.set(undefined);
 ```
 
