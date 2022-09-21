@@ -41,7 +41,7 @@ const someRecord: WritableTree<SomeRecord> = writableTree({
 // Subscribe as an ordinary store.
 someRecord.subscribe((newUser) => {
   console.log('Updated the user', newUser);
-}
+});
 
 // `zoomIn` / `zoomInWritable`:
 //    Create a store that subscribes only a specific field of the object
