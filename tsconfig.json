@@ -4,6 +4,8 @@
     "target": "esnext",
     "useDefineForClassFields": true,
     "module": "esnext",
+    "declaration": true,
+    "sourceMap": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
     "outDir": "./dist/",
