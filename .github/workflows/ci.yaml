@@ -27,5 +27,7 @@ jobs:
           cd tmp-ci
           npm i -S ../svelte-store-tree-0.1.1.tgz
           npm i -D typescript
+          pwd
+          ls node_modules
           npx tsc
           node test-script.mjs
