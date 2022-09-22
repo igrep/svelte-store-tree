@@ -1,5 +1,9 @@
 # svelte-store-tree
 
+[![npm version](https://badge.fury.io/js/svelte-store-tree.svg)](https://badge.fury.io/js/svelte-store-tree)
+[![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+![CI](https://github.com/igrep/svelte-store-tree/actions/workflows/ci.yaml/badge.svg)
+
 Current status: Experimental.
 
 Provides writable/readable stores that can 'zoom' into a part of the store
