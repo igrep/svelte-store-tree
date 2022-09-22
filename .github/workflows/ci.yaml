@@ -20,14 +20,14 @@ jobs:
           node-version: "lts/*"
           cache: 'npm'
       - run: |
+          npm config set prefix "node_modules"
           npm pack
           mkdir tmp-ci
           perl -nle 'print $_ if /^<!-- BEGIN README TEST -->$/ .. /^<!-- END README TEST -->$/ and /^```typescript$/ .. /^```$/ and not /^```(?:typescript)?$/' ./README.md > tmp-ci/test-script.mts
           cp ./tsconfig-ci-readme-test.json tmp-ci/tsconfig.json
           cd tmp-ci
+          npm init --yes
           npm i -S ../svelte-store-tree-0.1.1.tgz
           npm i -D typescript
-          pwd
-          ls node_modules
           npx tsc
           node test-script.mjs
