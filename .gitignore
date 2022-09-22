@@ -25,3 +25,6 @@ dist-ssr
 
 src/**/*.js
 src/**/*.js.map
+
+/tmp-cl/
+*.tgz
