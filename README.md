@@ -12,6 +12,8 @@ keeping the independence of every child component.
 
 # Example
 
+<!-- BEGIN README TEST -->
+
 ```typescript
 import { writableTree, Refuse } from 'svelte-store-tree';
 import type { WritableTree } from 'svelte-store-tree';
@@ -89,6 +91,8 @@ favoriteColor.set([0xC0, 0x10, 0x10]);
 // Notifies the subscribers of `someRecord`, and `favoriteColor` (not `favoriteColorNonUndefined`).
 favoriteColor.set(undefined);
 ```
+
+<!-- END README TEST -->
 
 # Working Example App
 
