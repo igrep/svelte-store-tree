@@ -31,10 +31,8 @@
     "url": "https://github.com/igrep/svelte-store-tree/issues"
   },
   "homepage": "https://github.com/igrep/svelte-store-tree#readme",
-  "dependencies": {
-    "svelte": "^3.50.0"
-  },
   "devDependencies": {
+    "svelte": "^3.50.0",
     "@sveltejs/vite-plugin-svelte": "^1.0.5",
     "@tsconfig/svelte": "^3.0.0",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
