@@ -61,25 +61,27 @@ export function mapAccessor<K extends Key, V>(key: K): Accessor<Map<K, V>, V> {
   };
 }
 
-export type WritableTreeCore<P> = {
+export type ReadableTreeCore<P> = {
   zoom<C>(accessor: Accessor<P, C>): ReadableTree<C>;
 
-  zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C>;
-
   zoomIn<K extends keyof P>(k: K): ReadableTree<P[K]>;
-
-  zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]>;
 
   choose<P_ extends P>(
     chooseParent: (parent: P) => P_ | Refuse,
   ): ReadableTree<P_>;
+}
+
+export type WritableTreeCore<P> = ReadableTreeCore<P> & {
+  zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C>;
+
+  zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]>;
 
   chooseWritable<P_ extends P>(
     chooseParent: (parent: P) => P_ | Refuse,
   ): WritableTree<P_>;
 };
 
-export type ReadableTree<P> = Readable<P> & WritableTreeCore<P>;
+export type ReadableTree<P> = Readable<P> & ReadableTreeCore<P>;
 
 export type WritableTree<P> = Writable<P> & WritableTreeCore<P>;
 
@@ -96,20 +98,14 @@ export function readableTree<P>(
   const {
     subscribe,
     zoom,
-    zoomWritable,
     zoomIn,
-    zoomInWritable,
     choose,
-    chooseWritable,
   } = writableTree(value, start);
   return {
     subscribe,
     zoom,
-    zoomWritable,
     zoomIn,
-    zoomInWritable,
     choose,
-    chooseWritable,
   };
 }
 
@@ -236,20 +232,14 @@ function writableTreeCore<P>(
     const {
       subscribe,
       zoom,
-      zoomWritable: zw,
       zoomIn,
-      zoomInWritable,
       choose,
-      chooseWritable,
     } = zoomWritable(accessor);
     return {
       subscribe,
       zoom,
-      zoomWritable: zw,
       zoomIn,
-      zoomInWritable,
       choose,
-      chooseWritable,
     };
   }
 
@@ -319,20 +309,14 @@ function writableTreeCore<P>(
     const {
       subscribe,
       zoom,
-      zoomWritable,
       zoomIn,
-      zoomInWritable,
       choose,
-      chooseWritable: cw,
     } = chooseWritable(chooseParent);
     return {
       subscribe,
       zoom,
-      zoomWritable,
       zoomIn,
-      zoomInWritable,
       choose,
-      chooseWritable: cw,
     };
   }
 

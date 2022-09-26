@@ -115,22 +115,24 @@ export function readableTree<P>(
   start: StartStopNotifier<P> = noop,
 ): ReadableTree<P>
 
-export type ReadableTree<P> = Readable<P> & WritableTreeCore<P>;
+export type ReadableTree<P> = Readable<P> & ReadableTreeCore<P>;
 
 export type WritableTree<P> = Writable<P> & WritableTreeCore<P>;
 
-export type WritableTreeCore<P> = {
+export type ReadableTreeCore<P> = {
   zoom<C>(accessor: Accessor<P, C>): ReadableTree<C>;
 
-  zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C>;
-
   zoomIn<K extends keyof P>(k: K): ReadableTree<P[K]>;
-
-  zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]>;
 
   choose<P_ extends P>(
     chooseParent: (parent: P) => P_ | Refuse,
   ): ReadableTree<P_>;
+}
+
+export type WritableTreeCore<P> = ReadableTreeCore<P> & {
+  zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C>;
+
+  zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]>;
 
   chooseWritable<P_ extends P>(
     chooseParent: (parent: P) => P_ | Refuse,
