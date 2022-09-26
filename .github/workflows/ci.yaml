@@ -11,12 +11,3 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm test
-  readmeTest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: "lts/*"
-          cache: 'npm'
-      - run: bash ci/try-install-and-test-readme.sh

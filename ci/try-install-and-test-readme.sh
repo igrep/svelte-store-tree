@@ -9,7 +9,8 @@ perl -nle 'print $_ if /^<!-- BEGIN README TEST -->$/ .. /^<!-- END README TEST 
 cp ./tsconfig-ci-readme-test.json tmp-ci/tsconfig.json
 cd tmp-ci
 
-# FIXME: This script doesn't work on CI due to installing the tgz fails silently.
+# FIXME: This script doesn't work on GitHub Actions due to installing the tgz
+#        here fails silently. `tmp-ci/node_modules` isn't created!
 npm init --yes
 npm i -S ../svelte-store-tree-*.tgz
 npm i -D typescript svelte
