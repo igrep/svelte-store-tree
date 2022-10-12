@@ -1,3 +1,7 @@
+# v0.3.1
+
+- Update the description to include "nested stores" as its keyword
+
 # v0.2.1
 
 - `svelte` should always be in `devDependencies`
