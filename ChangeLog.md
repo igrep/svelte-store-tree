@@ -1,6 +1,8 @@
 # v0.3.1
 
-- Update the description to include "nested stores" as its keyword
+- 📝 Documentation changes etc:
+    - Update the description to include "nested stores" as its keyword
+    - Add how to install
 
 # v0.2.1
 

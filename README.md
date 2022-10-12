@@ -102,6 +102,12 @@ Run on CodeSandbox
 ![Example App running on CodeSandbox](./docs/codesandbox.png "Example App running on CodeSandbox")
 </a>
 
+# Installation
+
+```bash
+$ npm install --save svelte-store-tree
+```
+
 # API
 
 ```typescript
