@@ -45,5 +45,5 @@
   </tr>
     {/each}
 </table>
-  <hr>
+<hr>
 <TreeComponent {tree}/>
