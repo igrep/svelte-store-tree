@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { WritableTree } from "../src";
-import { writableTree, Refuse } from "../src";
+import { into, isPresent, choose, Refuse, writableTree, type WritableTree } from "../src";
 
 describe("nestedWritable", () => {
   it("creates a writable store", () => {
@@ -110,9 +109,9 @@ describe("nestedWritable", () => {
           three: 3,
         };
         const parent = writableTree(initParent);
-        const childOne = parent.zoomInWritable("one");
-        const childTwo = parent.zoomInWritable("two");
-        const childThree = parent.zoomInWritable("three");
+        const childOne = parent.zoom(into("one"));
+        const childTwo = parent.zoom(into("two"));
+        const childThree = parent.zoom(into("three"));
 
         const called = {
           one: [] as number[],
@@ -159,9 +158,9 @@ describe("nestedWritable", () => {
           },
         };
         const parent = writableTree(initParent);
-        const childOne = parent.zoomInWritable("one");
-        const childTwo = childOne.zoomInWritable("two");
-        const childThree = childTwo.zoomInWritable("three");
+        const childOne = parent.zoom(into("one"));
+        const childTwo = childOne.zoom(into("two"));
+        const childThree = childTwo.zoom(into("three"));
 
         const called = {
           one: [] as Parent["one"][],
@@ -209,9 +208,9 @@ describe("nestedWritable", () => {
           },
         };
         const parent = writableTree(initParent);
-        const childOne = parent.zoomInWritable("one");
-        const childTwo = childOne.zoomInWritable("two");
-        const childThree = childTwo.zoomInWritable("three");
+        const childOne = parent.zoom(into("one"));
+        const childTwo = childOne.zoom(into("two"));
+        const childThree = childTwo.zoom(into("three"));
 
         const called = {
           one: [] as Parent["one"][],
@@ -268,11 +267,11 @@ describe("nestedWritable", () => {
           },
         };
         const parent = writableTree(structuredClone(initParent));
-        const childOne = parent.zoomInWritable("one");
-        const childTwo = childOne.zoomInWritable("two");
-        const childAnotherTwo = childOne.zoomInWritable("anotherTwo");
-        const childThree = childTwo.zoomInWritable("three");
-        const childAnotherThree = childAnotherTwo.zoomInWritable("three");
+        const childOne = parent.zoom(into("one"));
+        const childTwo = childOne.zoom(into("two"));
+        const childAnotherTwo = childOne.zoom(into("anotherTwo"));
+        const childThree = childTwo.zoom(into("three"));
+        const childAnotherThree = childAnotherTwo.zoom(into("three"));
 
         const called = {
           one: [] as Parent["one"][],
@@ -333,8 +332,8 @@ describe("nestedWritable", () => {
           },
         };
         const parent = writableTree(initParent);
-        const child = parent.zoomInWritable("child");
-        const grandChild = child.zoomInWritable("grandChild");
+        const child = parent.zoom(into("child"));
+        const grandChild = child.zoom(into("grandChild"));
 
         const called = {
           parent: [] as Parent[],
@@ -372,9 +371,9 @@ describe("nestedWritable", () => {
           three: 3,
         };
         const parent = writableTree(structuredClone(initParent));
-        const childOne = parent.zoomInWritable("one");
-        const childTwo = parent.zoomInWritable("two");
-        const childThree = parent.zoomInWritable("three");
+        const childOne = parent.zoom(into("one"));
+        const childTwo = parent.zoom(into("two"));
+        const childThree = parent.zoom(into("three"));
 
         const called = {
           one: [] as number[],
@@ -415,8 +414,8 @@ describe("nestedWritable", () => {
       const init: Both = undefined;
 
       const both = writableTree<Both>(init);
-      const a = both.chooseWritable((v) => (v?.type === "A" ? v : Refuse));
-      const b = both.chooseWritable((v) => (v?.type === "B" ? v : Refuse));
+      const a = both.zoom(choose((v) => (v?.type === "A" ? v : Refuse)));
+      const b = both.zoom(choose((v) => (v?.type === "B" ? v : Refuse)));
 
       const called = {
         a: [] as ValueA[],
@@ -449,8 +448,8 @@ describe("nestedWritable", () => {
       const init: Value = undefined;
 
       const value = writableTree<Value>(init);
-      const onlyPresent = value.chooseWritable((v) => v ?? Refuse);
-      const internalValue = onlyPresent.zoomInWritable("value");
+      const onlyPresent = value.zoom(isPresent());
+      const internalValue = onlyPresent.zoom(into("value"));
 
       const called = {
         value: [] as Value[],
@@ -523,11 +522,11 @@ describe("nestedWritable", () => {
         };
 
         parent = writableTree(structuredClone(init));
-        maybeChild = parent.zoomInWritable("child");
-        child = maybeChild.chooseWritable((mc) => mc ?? Refuse);
-        grandChild = child.zoomInWritable("grandChild");
-        a = grandChild.zoomInWritable("a");
-        b = grandChild.zoomInWritable("b");
+        maybeChild = parent.zoom(into("child"));
+        child = maybeChild.zoom(isPresent());
+        grandChild = child.zoom(into("grandChild"));
+        a = grandChild.zoom(into("a"));
+        b = grandChild.zoom(into("b"));
 
         parent.subscribe((v) => {
           called.parent.push(structuredClone(v));
