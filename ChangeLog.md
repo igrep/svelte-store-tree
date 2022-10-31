@@ -1,3 +1,16 @@
+# v0.3.1
+
+- Breaking changes:
+    - Re-design the API from scratch:
+        - Now `zoom` and `zoomNoSet` are the only APIs that `ReadableTree`/`WriteableTree` adds to `Readable`/`Writable`.
+            - `zoom` accepts an `Accessor` object, which contains `readChild` and `writeChild`.
+            - `zoomNoSet` accepts a `readChild` function to return `ReadableTree`.
+        - New `Accessor` class can replace `zoomIn`, `choose`, etc, and it's composable with the `and` method.
+        - `ReadableTree` is now "writable" in its children: `ReadableTree`'s `zoom`ed tree can be `set`.
+- 📝 Documentation changes etc:
+    - Update the description to include "nested stores" as its keyword
+    - Add how to install
+
 # v0.2.1
 
 - `svelte` should always be in `devDependencies`

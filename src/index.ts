@@ -18,12 +18,59 @@ export type Refuse = typeof Refuse;
 
 type Getter<T> = () => T | Refuse;
 
-export type Key = string | number | symbol;
+export class Accessor<P, C> {
+  constructor(
+    readonly readChild: (parent: P) => C | Refuse,
+    readonly writeChild: (parent: P, newChild: C) => void,
+  ){}
 
-export type Accessor<P, C> = {
-  readChild: (parent: P) => C | Refuse;
-  writeChild: (parent: P, newChild: C) => void;
-};
+  and<GC>(other: Accessor<C, GC>): Accessor<P, GC> {
+    return new Accessor(
+      (p: P) => {
+        const c = this.readChild(p);
+        if (c === Refuse) {
+          return Refuse;
+        }
+        return other.readChild(c);
+      },
+      (p: P, gc: GC) => {
+        const c = this.readChild(p);
+        if (c === Refuse) {
+          return;
+        }
+        return other.writeChild(c, gc);
+      },
+    );
+  }
+}
+
+export function into<P, K extends keyof P>(key: K): Accessor<P, P[K]> {
+  return new Accessor(
+    (parent: P) => parent[key],
+    (parent: P, newChild: P[K]) => (parent[key] = newChild),
+  );
+}
+
+export function intoMap<K extends string | number | symbol, V>(key: K): Accessor<Map<K, V>, V> {
+  return new Accessor(
+    (parent: Map<K, V>) =>
+      parent.has(key) ? parent.get(key) as V : Refuse,
+    (parent: Map<K, V>, newChild: V) => {
+      parent.set(key, newChild);
+    },
+  );
+}
+
+export function isPresent<P>(): Accessor<P, NonNullable<P>> {
+  return choose((parent) => parent ?? Refuse);
+}
+
+export function choose<P, C>(readChild: (parent: P) => C | Refuse): Accessor<P, C> {
+  return new Accessor(
+    readChild,
+    (_parent: P, _newParent: C) => {},
+  );
+}
 
 type SubscribersNode = {
   r: Subscriber<unknown>;
@@ -41,49 +88,14 @@ type SubscribersTree = {
   thisSubscribers: Set<SubscribersNode>;
 };
 
-export function objectAccessor<P, K extends keyof P>(
-  key: K,
-): Accessor<P, P[K]> {
-  return {
-    readChild: (parent: P) => parent[key],
-    writeChild: (parent: P, newChild: P[K]) => (parent[key] = newChild),
-  };
-}
-
-export function mapAccessor<K extends Key, V>(key: K): Accessor<Map<K, V>, V> {
-  return {
-    readChild: (parent: Map<K, V>) =>
-      /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
-      parent.has(key) ? parent.get(key)! : Refuse,
-    writeChild: (parent: Map<K, V>, newChild: V) => {
-      parent.set(key, newChild);
-    },
-  };
-}
-
-export type ReadableTreeCore<P> = {
-  zoom<C>(accessor: Accessor<P, C>): ReadableTree<C>;
-
-  zoomIn<K extends keyof P>(k: K): ReadableTree<P[K]>;
-
-  choose<P_ extends P>(
-    chooseParent: (parent: P) => P_ | Refuse,
-  ): ReadableTree<P_>;
-}
-
-export type WritableTreeCore<P> = ReadableTreeCore<P> & {
-  zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C>;
-
-  zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]>;
-
-  chooseWritable<P_ extends P>(
-    chooseParent: (parent: P) => P_ | Refuse,
-  ): WritableTree<P_>;
+export type StoreTreeCore<P> = {
+  zoom<C>(accessor: Accessor<P, C>): WritableTree<C>;
+  zoomNoSet<C>(readChild: (parent: P) => C | Refuse): ReadableTree<C>;
 };
 
-export type ReadableTree<P> = Readable<P> & ReadableTreeCore<P>;
+export type ReadableTree<P> = Readable<P> & StoreTreeCore<P>;
 
-export type WritableTree<P> = Writable<P> & WritableTreeCore<P>;
+export type WritableTree<P> = Writable<P> & StoreTreeCore<P>;
 
 // type SubscriberQueue = [] | [Subscriber<T>, T, ...(SubscriberQueue | [])];
 type SubscriberQueue = any[];
@@ -98,14 +110,12 @@ export function readableTree<P>(
   const {
     subscribe,
     zoom,
-    zoomIn,
-    choose,
+    zoomNoSet,
   } = writableTree(value, start);
   return {
     subscribe,
     zoom,
-    zoomIn,
-    choose,
+    zoomNoSet,
   };
 }
 
@@ -228,22 +238,7 @@ function writableTreeCore<P>(
     };
   }
 
-  function zoom<C>(accessor: Accessor<P, C>): ReadableTree<C> {
-    const {
-      subscribe,
-      zoom,
-      zoomIn,
-      choose,
-    } = zoomWritable(accessor);
-    return {
-      subscribe,
-      zoom,
-      zoomIn,
-      choose,
-    };
-  }
-
-  function zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C> {
+  function zoom<C>(accessor: Accessor<P, C>): WritableTree<C> {
     const getter = () => {
       const v = getValue();
       if (v === Refuse) {
@@ -295,49 +290,17 @@ function writableTreeCore<P>(
     );
   }
 
-  function zoomIn<K extends keyof P>(k: K): ReadableTree<P[K]> {
-    return zoom(objectAccessor<P, K>(k));
-  }
-
-  function zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]> {
-    return zoomWritable(objectAccessor<P, K>(k));
-  }
-
-  function choose<P_ extends P>(
-    chooseParent: (parent: P) => P_ | Refuse,
-  ): ReadableTree<P_> {
+  function zoomNoSet<C>(readChild: (parent: P) => C | Refuse): ReadableTree<C> {
     const {
       subscribe,
-      zoom,
-      zoomIn,
-      choose,
-    } = chooseWritable(chooseParent);
+      zoom: z,
+      zoomNoSet,
+    } = zoom(choose(readChild));
     return {
       subscribe,
-      zoom,
-      zoomIn,
-      choose,
+      zoom: z,
+      zoomNoSet,
     };
-  }
-
-  function chooseWritable<P_ extends P>(
-    chooseParent: (parent: P) => P_ | Refuse,
-  ): WritableTree<P_> {
-    return writableTreeCore<P_>(
-      function newGetValue(): P_ | Refuse {
-        const v = getValue();
-        if (v === Refuse) {
-          return Refuse;
-        }
-        return chooseParent(v);
-      },
-      writeValue,
-      tree,
-      incrementThenStartIfNecessary as StartStopNotifier<P_>,
-      decrementThenStopIfNecessary,
-      isReady,
-      parentSubscribers,
-    );
   }
 
   return {
@@ -345,10 +308,6 @@ function writableTreeCore<P>(
     update,
     subscribe,
     zoom,
-    zoomWritable,
-    zoomIn,
-    zoomInWritable,
-    choose,
-    chooseWritable,
+    zoomNoSet,
   };
 }

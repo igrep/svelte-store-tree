@@ -4,6 +4,7 @@ set -eu
 
 npm pack
 
+rm -rf tmp-ci
 mkdir tmp-ci
 perl -nle 'print $_ if /^<!-- BEGIN README TEST -->$/ .. /^<!-- END README TEST -->$/ and /^```typescript$/ .. /^```$/ and not /^```(?:typescript)?$/' ./README.md > tmp-ci/test-script.mts
 cp ./tsconfig-ci-readme-test.json tmp-ci/tsconfig.json

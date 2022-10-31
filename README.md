@@ -7,15 +7,15 @@
 Current status: Experimental.
 
 Provides writable/readable stores that can 'zoom' into a part of the store
-value. It enables us to manage the state of the app in a single object while
-keeping the independence of every child component.
+value (so-called "nested stores"). It enables us to manage the state of the app
+in a single object while keeping the independence of every child component.
 
 # Example
 
 <!-- BEGIN README TEST -->
 
 ```typescript
-import { writableTree, Refuse } from 'svelte-store-tree';
+import { writableTree, Refuse, into, choose, isPresent } from 'svelte-store-tree';
 import type { WritableTree } from 'svelte-store-tree';
 
 type SomeRecord = {
@@ -49,11 +49,11 @@ someRecord.subscribe((newUser) => {
   console.log('Updated the user', newUser);
 });
 
-// `zoomIn` / `zoomInWritable`:
+// `zoom` with the `into` Accessor;
 //    Create a store that subscribes only a specific field of the object
-const name = someRecord.zoomInWritable('name');
-const contact = someRecord.zoomInWritable('contact');
-const favoriteColor = someRecord.zoomInWritable('favoriteColor');
+const name = someRecord.zoom(into('name'));
+const contact = someRecord.zoom(into('contact'));
+const favoriteColor = someRecord.zoom(into('favoriteColor'));
 
 name.subscribe((newName) => {
   console.log('Updated the name', newName);
@@ -65,21 +65,26 @@ favoriteColor.subscribe((newColor) => {
   console.log('Updated the color', newColor);
 });
 
-// We can apply `zoomIn`/`zoomInWritable` deeper:
-const urls = contact.zoomInWritable('urls');
+// We can apply `zoom` deeper:
+const urls = contact.zoom(into('urls'));
 
 // Notifies the subscribers of `someRecord`, `contact`, and `urls`.
 // ** Changes are propagated only to the direct subscribers, and the ancestors'. **
 // ** Not to the the siblings' to avoid extra rerendering of the subscribing components. **
 urls.update((u) => [...u, 'https://twitter.com/igrep']);
 
-// If your record has a union type, `chooseWritable` is useful.
+// If your record contains a union type, the `choose` Accessor is useful.
 // Pass a function that returns a `Refuse` (a unique symbol provided by this library)
 // if the value doesn't satisfy the condition.
 const favoriteColorNonUndefined =
-  favoriteColor.chooseWritable((color) => color ?? Refuse);
+  favoriteColor.zoom(choose((color) => color ?? Refuse));
+
 // Now, favoriteColorNonUndefined is typed as `WritableTree<Color>`,
 // while favoriteColor is `WritableTree<Color | undefined>`.
+
+// As a shortcut for a nullable type, svelte-store-tree provides
+// the `isPresent` Accessor:
+const favoriteColorNonUndefined2 = favoriteColor.zoom(isPresent());
 
 favoriteColorNonUndefined.subscribe((newColor) => {
   console.log('Updated the color', newColor);
@@ -102,9 +107,16 @@ Run on CodeSandbox
 ![Example App running on CodeSandbox](./docs/codesandbox.png "Example App running on CodeSandbox")
 </a>
 
+# Installation
+
+```bash
+$ npm install --save svelte-store-tree
+```
+
 # API
 
 ```typescript
+// Core API
 export function writableTree<P>(
   value: P,
   start: StartStopNotifier<P> = noop,
@@ -115,43 +127,29 @@ export function readableTree<P>(
   start: StartStopNotifier<P> = noop,
 ): ReadableTree<P>
 
-export type ReadableTree<P> = Readable<P> & ReadableTreeCore<P>;
-
-export type WritableTree<P> = Writable<P> & WritableTreeCore<P>;
-
-export type ReadableTreeCore<P> = {
-  zoom<C>(accessor: Accessor<P, C>): ReadableTree<C>;
-
-  zoomIn<K extends keyof P>(k: K): ReadableTree<P[K]>;
-
-  choose<P_ extends P>(
-    chooseParent: (parent: P) => P_ | Refuse,
-  ): ReadableTree<P_>;
-}
-
-export type WritableTreeCore<P> = ReadableTreeCore<P> & {
-  zoomWritable<C>(accessor: Accessor<P, C>): WritableTree<C>;
-
-  zoomInWritable<K extends keyof P>(k: K): WritableTree<P[K]>;
-
-  chooseWritable<P_ extends P>(
-    chooseParent: (parent: P) => P_ | Refuse,
-  ): WritableTree<P_>;
+/// Types related to the Core API
+export type StoreTreeCore<P> = {
+  zoom<C>(accessor: Accessor<P, C>): WritableTree<C>;
+  zoomNoSet<C>(readChild: (parent: P) => C | Refuse): ReadableTree<C>;
 };
+export type ReadableTree<P> = Readable<P> & StoreTreeCore<P>;
+export type WritableTree<P> = Writable<P> & StoreTreeCore<P>;
 
 export const Refuse: unique symbol = Symbol();
 export type Refuse = typeof Refuse;
 
-export function objectAccessor<P, K extends keyof P>(
-  key: K,
-): Accessor<P, P[K]>;
-
-export function mapAccessor<K extends Key, V>(key: K): Accessor<Map<K, V>, V>;
-
-export type Key = string | number | symbol;
-
-export type Accessor<P, C> = {
+// Accessor API
+export class Accessor<P, C> {
   readChild: (parent: P) => C | Refuse;
   writeChild: (parent: P, newChild: C) => void;
+  and<GC>(other: Accessor<C, GC>): Accessor<P, GC>;
 };
+
+/// Various Utility Accessors
+export function into<P, K extends keyof P>(key: K): Accessor<P, P[K]>;
+export function intoMap<K extends string | number | symbol, V>(key: K): Accessor<Map<K, V>, V>;
+export function isPresent<P>(): Accessor<P, NonNullable<P>>;
+export function choose<P, C>(readChild: (parent: P) => C | Refuse): Accessor<P, C>;
+
+export type Key = string | number | symbol;
 ```
