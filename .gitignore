@@ -23,8 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 
+example/**/*.js
+example/**/*.d.ts
+example/**/*.js.map
 src/**/*.js
+src/**/*.d.ts
 src/**/*.js.map
+test/**/*.js
+test/**/*.d.ts
+test/**/*.js.map
 
 *.tgz
 /tmp-ci/

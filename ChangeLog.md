@@ -1,3 +1,7 @@
+# v0.3.2
+
+- Include the `.ts` file in the distribution for better debugging experience.
+
 # v0.3.1
 
 - Breaking changes:
