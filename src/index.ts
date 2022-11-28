@@ -61,15 +61,8 @@ export function intoMap<K extends string | number | symbol, V>(key: K): Accessor
   );
 }
 
-export function isPresent<P>(): Accessor<P, NonNullable<P>> {
-  return choose((parent) => parent ?? Refuse);
-}
-
-export function choose<P, C>(readChild: (parent: P) => C | Refuse): Accessor<P, C> {
-  return new Accessor(
-    readChild,
-    (_parent: P, _newParent: C) => {},
-  );
+export function isPresent<P>(parent: P): NonNullable<P> | Refuse {
+  return parent ?? Refuse;
 }
 
 type SubscribersNode = {
@@ -91,6 +84,7 @@ type SubscribersTree = {
 export type StoreTreeCore<P> = {
   zoom<C>(accessor: Accessor<P, C>): WritableTree<C>;
   zoomNoSet<C>(readChild: (parent: P) => C | Refuse): ReadableTree<C>;
+  choose<P_ extends P>(readChild: (parent: P) => P_ | Refuse): WritableTree<P_>;
 };
 
 export type ReadableTree<P> = Readable<P> & StoreTreeCore<P>;
@@ -111,11 +105,13 @@ export function readableTree<P>(
     subscribe,
     zoom,
     zoomNoSet,
+    choose,
   } = writableTree(value, start);
   return {
     subscribe,
     zoom,
     zoomNoSet,
+    choose,
   };
 }
 
@@ -238,13 +234,13 @@ function writableTreeCore<P>(
     };
   }
 
-  function zoom<C>(accessor: Accessor<P, C>): WritableTree<C> {
+  function createChild<C>(readChild: (parent: P) => C | Refuse, writeChild: (newChild: C) => void,): WritableTree<C> {
     const getter = () => {
       const v = getValue();
       if (v === Refuse) {
         return Refuse;
       }
-      return accessor.readChild(v);
+      return readChild(v);
     };
     const child: GetterAndChild = {
       g: getter as Getter<unknown>,
@@ -257,17 +253,11 @@ function writableTreeCore<P>(
 
     return writableTreeCore(
       getter,
-      (newChild: C) => {
-        const v = getValue();
-        if (v === Refuse) {
-          return;
-        }
-        accessor.writeChild(v, newChild);
-      },
+      writeChild,
       child.c,
       function incrementThenStartIfNecessaryForChild(set: Subscriber<C>) {
         incrementThenStartIfNecessary((parent: P) => {
-          const v = accessor.readChild(parent);
+          const v = readChild(parent);
           if (v !== Refuse) {
             set(v);
           }
@@ -290,16 +280,42 @@ function writableTreeCore<P>(
     );
   }
 
+  function zoom<C>(accessor: Accessor<P, C>): WritableTree<C> {
+    return createChild(
+      accessor.readChild,
+      (newChild: C) => {
+        const v = getValue();
+        if (v === Refuse) {
+          return;
+        }
+        accessor.writeChild(v, newChild);
+      },
+    );
+  }
+
+  function choose<P_ extends P>(readChild: (parent: P) => P_ | Refuse): WritableTree<P_> {
+    return createChild(readChild, writeValue);
+  }
+
   function zoomNoSet<C>(readChild: (parent: P) => C | Refuse): ReadableTree<C> {
     const {
       subscribe,
       zoom: z,
       zoomNoSet,
-    } = zoom(choose(readChild));
+      choose,
+    } = zoom(
+      new Accessor(
+        readChild,
+        () => {
+          throw new Error("Assertion failed: writeChild for zoomNoSet must not be called!");
+        },
+      ),
+    );
     return {
       subscribe,
       zoom: z,
       zoomNoSet,
+      choose,
     };
   }
 
@@ -309,5 +325,6 @@ function writableTreeCore<P>(
     subscribe,
     zoom,
     zoomNoSet,
+    choose,
   };
 }

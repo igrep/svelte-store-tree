@@ -1,3 +1,10 @@
+# v0.4.1
+
+- Breaking changes:
+    - `choose` is now a method of `WritableTree`/`ReadableTree` (again since v0.1.1). This is necessary to fix the problem that the `set` method of a `WriteableTree` made with `choose` updates nothing.
+    - `isPresent` is no more an `Accessor`: just a function that returns `Refuse` if the argument is `undefined`/`null`.
+- Refactor tests.
+
 # v0.3.2
 
 - Include the `.ts` file in the distribution for better debugging experience.

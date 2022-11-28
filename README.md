@@ -15,7 +15,7 @@ in a single object while keeping the independence of every child component.
 <!-- BEGIN README TEST -->
 
 ```typescript
-import { writableTree, Refuse, into, choose, isPresent } from 'svelte-store-tree';
+import { writableTree, Refuse, into, isPresent } from 'svelte-store-tree';
 import type { WritableTree } from 'svelte-store-tree';
 
 type SomeRecord = {
@@ -73,18 +73,18 @@ const urls = contact.zoom(into('urls'));
 // ** Not to the the siblings' to avoid extra rerendering of the subscribing components. **
 urls.update((u) => [...u, 'https://twitter.com/igrep']);
 
-// If your record contains a union type, the `choose` Accessor is useful.
+// If your record contains a union type, the `choose` method is useful.
 // Pass a function that returns a `Refuse` (a unique symbol provided by this library)
 // if the value doesn't satisfy the condition.
 const favoriteColorNonUndefined =
-  favoriteColor.zoom(choose((color) => color ?? Refuse));
+  favoriteColor.choose((color) => color ?? Refuse);
 
 // Now, favoriteColorNonUndefined is typed as `WritableTree<Color>`,
 // while favoriteColor is `WritableTree<Color | undefined>`.
 
 // As a shortcut for a nullable type, svelte-store-tree provides
-// the `isPresent` Accessor:
-const favoriteColorNonUndefined2 = favoriteColor.zoom(isPresent());
+// the `isPresent` function used with `choose`:
+const favoriteColorNonUndefined2 = favoriteColor.choose(isPresent);
 
 favoriteColorNonUndefined.subscribe((newColor) => {
   console.log('Updated the color', newColor);
@@ -131,6 +131,7 @@ export function readableTree<P>(
 export type StoreTreeCore<P> = {
   zoom<C>(accessor: Accessor<P, C>): WritableTree<C>;
   zoomNoSet<C>(readChild: (parent: P) => C | Refuse): ReadableTree<C>;
+  choose<P_ extends P>(readChild: (parent: P) => P_ | Refuse): WritableTree<P_>;
 };
 export type ReadableTree<P> = Readable<P> & StoreTreeCore<P>;
 export type WritableTree<P> = Writable<P> & StoreTreeCore<P>;
@@ -138,8 +139,12 @@ export type WritableTree<P> = Writable<P> & StoreTreeCore<P>;
 export const Refuse: unique symbol = Symbol();
 export type Refuse = typeof Refuse;
 
+/// Utility function to help the `StoreTreeCore.prototype.choose` method
+export function isPresent<P>(parent: P): NonNullable<P> | Refuse;
+
 // Accessor API
 export class Accessor<P, C> {
+  constructor(readChild: (parent: P) => C | Refuse, writeChild: (parent: P, newChild: C) => void);
   readChild: (parent: P) => C | Refuse;
   writeChild: (parent: P, newChild: C) => void;
   and<GC>(other: Accessor<C, GC>): Accessor<P, GC>;
@@ -148,8 +153,4 @@ export class Accessor<P, C> {
 /// Various Utility Accessors
 export function into<P, K extends keyof P>(key: K): Accessor<P, P[K]>;
 export function intoMap<K extends string | number | symbol, V>(key: K): Accessor<Map<K, V>, V>;
-export function isPresent<P>(): Accessor<P, NonNullable<P>>;
-export function choose<P, C>(readChild: (parent: P) => C | Refuse): Accessor<P, C>;
-
-export type Key = string | number | symbol;
 ```

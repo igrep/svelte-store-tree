@@ -1,16 +1,14 @@
 <script lang="ts">
-  import { Refuse, choose, into, type WritableTree } from "../src";
+  import { Refuse, into, type WritableTree } from "../src";
   import { appendTo, changeNodeType, chooseKeyValue } from "./tree";
   import type { Tree, NodeType } from "./tree";
   import NodeTypeSelector from "./NodeTypeSelector.svelte";
 
   export let tree: WritableTree<Tree>;
 
-  const list = tree.zoom(
-    choose((t) => t instanceof Array ? t : Refuse)
-  );
+  const list = tree.choose((t) => t instanceof Array ? t : Refuse);
 
-  const keyValue = tree.zoom(choose(chooseKeyValue));
+  const keyValue = tree.choose(chooseKeyValue);
   const key = keyValue.zoom(into("key"));
   const value = keyValue.zoom(into("value"));
 
