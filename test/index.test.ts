@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, test } from "vitest";
 
-import { into, isPresent, choose, Refuse, writableTree, type WritableTree } from "../src";
+import { into, isPresent, Refuse, writableTree, type WritableTree } from "../src";
 
-describe("nestedWritable", () => {
+describe("writableTree", () => {
   it("creates a writable store", () => {
     const count = writableTree(0);
     const values: number[] = [];
@@ -95,7 +95,7 @@ describe("nestedWritable", () => {
     unsubscribe();
   });
 
-  describe("zoomInWritable", () => {
+  describe("zoom", () => {
     describe("when setting the parent writable", () => {
       it("calls both child subscribers and parent subscribers by setting the parent writable", () => {
         type Parent = {
@@ -406,7 +406,7 @@ describe("nestedWritable", () => {
     });
   });
 
-  describe("chooseWritable", () => {
+  describe("choose", () => {
     it("calls subscribers only if the chooser doesn't refuse", () => {
       type ValueA = { type: "A"; value: number };
       type ValueB = { type: "B"; value: string };
@@ -414,8 +414,8 @@ describe("nestedWritable", () => {
       const init: Both = undefined;
 
       const both = writableTree<Both>(init);
-      const a = both.zoom(choose((v) => (v?.type === "A" ? v : Refuse)));
-      const b = both.zoom(choose((v) => (v?.type === "B" ? v : Refuse)));
+      const a = both.choose((v) => (v?.type === "A" ? v : Refuse));
+      const b = both.choose((v) => (v?.type === "B" ? v : Refuse));
 
       const called = {
         a: [] as ValueA[],
@@ -448,7 +448,7 @@ describe("nestedWritable", () => {
       const init: Value = undefined;
 
       const value = writableTree<Value>(init);
-      const onlyPresent = value.zoom(isPresent());
+      const onlyPresent = value.choose(isPresent);
       const internalValue = onlyPresent.zoom(into("value"));
 
       const called = {
@@ -523,7 +523,7 @@ describe("nestedWritable", () => {
 
         parent = writableTree(structuredClone(init));
         maybeChild = parent.zoom(into("child"));
-        child = maybeChild.zoom(isPresent());
+        child = maybeChild.choose(isPresent);
         grandChild = child.zoom(into("grandChild"));
         a = grandChild.zoom(into("a"));
         b = grandChild.zoom(into("b"));
@@ -601,5 +601,32 @@ describe("nestedWritable", () => {
         });
       });
     });
+
+    test("writables returned by the `choose()` can update the store value", () => {
+      type Value = { value: string | undefined };
+      const storeValue: Value = { value: undefined };
+      const value = writableTree<Value>(storeValue);
+      const onlyPresent = value.zoom(into("value")).choose((v) => v ?? Refuse);
+
+      const called = {
+        value: [] as Value[],
+        onlyPresent: [] as Value['value'][],
+      };
+
+      value.subscribe((v) => called.value.push(v));
+      onlyPresent.subscribe((v) => called.onlyPresent.push(v));
+
+      const setValue = "setValue";
+      onlyPresent.set(setValue);
+
+      expect(called).toEqual({
+        value: [storeValue, storeValue],
+        onlyPresent: [setValue],
+      });
+      expect(storeValue).toEqual({
+        value: setValue,
+      });
+    });
+
   });
 });
