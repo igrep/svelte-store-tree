@@ -1,4 +1,3 @@
-import { noop, safe_not_equal } from "svelte/internal";
 import type {
   Readable,
   StartStopNotifier,
@@ -126,14 +125,14 @@ export function writableTree<P>(
 
   let countAllSubscribers = 0;
   let stop: Unsubscriber | undefined;
-  return writableTreeCore(
+  const wt = writableTreeCore(
     () => value,
     (newValue: P) => (value = newValue),
     tree,
-    function incrementThenStartIfNecessary(set: Subscriber<P>) {
+    function incrementThenStartIfNecessary() {
       ++countAllSubscribers;
       if (countAllSubscribers === 1) {
-        stop = start(set) || noop;
+        stop = start(wt.set, wt.update) || noop;
       }
     },
     function decrementThenStopIfNecessary() {
@@ -148,13 +147,14 @@ export function writableTree<P>(
     },
     [],
   );
+  return wt;
 }
 
 function writableTreeCore<P>(
   getValue: () => P | Refuse,
   writeValue: (newValue: P) => void,
   tree: SubscribersTree,
-  incrementThenStartIfNecessary: StartStopNotifier<P>,
+  incrementThenStartIfNecessary: () => void,
   decrementThenStopIfNecessary: Unsubscriber,
   isReady: () => boolean,
   parentSubscribers: ParentSubscriber[],
@@ -222,7 +222,7 @@ function writableTreeCore<P>(
       g: getValue,
     };
     tree.thisSubscribers.add(subscriber);
-    incrementThenStartIfNecessary(set);
+    incrementThenStartIfNecessary();
     const v = getValue();
     if (v !== Refuse) {
       run(v);
@@ -255,14 +255,7 @@ function writableTreeCore<P>(
       getter,
       writeChild,
       child.c,
-      function incrementThenStartIfNecessaryForChild(set: Subscriber<C>) {
-        incrementThenStartIfNecessary((parent: P) => {
-          const v = readChild(parent);
-          if (v !== Refuse) {
-            set(v);
-          }
-        });
-      },
+      incrementThenStartIfNecessary,
       decrementThenStopIfNecessary,
       isReady,
       [
@@ -327,4 +320,12 @@ function writableTreeCore<P>(
     zoomNoSet,
     choose,
   };
+}
+
+// Copied from svelte/internal
+function noop() {
+  // Literally no operation.
+}
+function safe_not_equal(a: unknown, b: unknown) {
+  return a != a ? b == b : a !== b || (a && typeof a === 'object') || typeof a === 'function';
 }
