@@ -1,6 +1,55 @@
 import { beforeEach, describe, expect, it, test } from "vitest";
 
-import { into, isPresent, Refuse, writableTree, type WritableTree } from "../src";
+import { into, isPresent, Refuse, readableTree, writableTree, type WritableTree } from "../src";
+
+describe("readableTree", () => {
+  // Translated from Svelte's test suite:
+  // https://github.com/sveltejs/svelte/pull/6750/files#diff-6c841bedaaa45461314f6b84fc7ab1ded9884e0922831d8ce750145362465317R140
+
+  it('passes an optional update and set function to the start stop notifier', () => {
+    let running = false;
+    let tick: (value: number) => void;
+    let add: (value: number) => void;
+
+    const store = readableTree(0, (set, update) => {
+      tick = set;
+      running = true;
+      add = n => update(value => value + n);
+
+      set(0);
+
+      return () => {
+        tick = () => { /* empty */ };
+        add = _ => { /* empty */ };
+        running = false;
+      };
+    });
+
+    expect(running).toEqual(false);
+
+    const values: number[] = [];
+
+    const unsubscribe = store.subscribe(value => {
+      values.push(value);
+    });
+
+    expect(running).toEqual(true);
+    tick!(1);
+    tick!(2);
+    add!(3);
+    add!(4);
+    tick!(5);
+    add!(6);
+
+    unsubscribe();
+
+    expect(running).toEqual(false);
+    tick!(7);
+    add!(8);
+
+    expect(values).toEqual([0, 1, 2, 5, 9, 5, 11]);
+  });
+});
 
 describe("writableTree", () => {
   it("creates a writable store", () => {
