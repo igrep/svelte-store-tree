@@ -1,6 +1,6 @@
 {
   "name": "svelte-store-tree",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "type": "module",
   "description": "Provides writable/readable stores that can 'zoom' into the part of the store value (nested stores).",
   "main": "src/index.js",
