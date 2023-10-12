@@ -1,3 +1,11 @@
+# v0.5.2
+
+- Update dependencies to fix CVE-2023-44270.
+
+# v0.5.1
+
+- Support Svelte 4
+
 # v0.4.1
 
 - Breaking changes:
